@@ -1,0 +1,60 @@
+on:
+  push:
+    branches:
+      - main
+name: 🚀🔨 Deploy And Test
+jobs:
+  build_test:
+    name: 🔨 Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Use Node.js 14
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+      - name: 🔨 Test Project
+        run: |
+          yarn install
+          yarn test
+  web-deploy:
+    environment: wordpress
+    needs: build_test
+    name: 🎉 Deploy
+    runs-on: ubuntu-latest
+    steps:
+    - name: 🚚 Get latest code
+      uses: actions/checkout@v2
+
+    - name: Use Node.js 14
+      uses: actions/setup-node@v2
+      with:
+        node-version: '14'
+      
+    - name: 🔨 Build Project
+      run: |
+        yarn install
+        yarn build-wp
+    
+    - name: List output files
+      run: find dist/ -print
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: tpp-area-report.zip
+        path: dist/tpp-area-report.zip
+
+    - name: Unzip
+      run: |
+        unzip -qq dist/tpp-area-report.zip -d dir
+      
+    - name: 📂 Sync files
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ vars.FTP_HOST }}
+        username: ${{ vars.FTP_USER }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: dir/
+        server-dir: wp-content/plugins/tpp-area-report/
+        protocol: ftps
